@@ -3,100 +3,77 @@ import { prisma } from '@/lib/prisma';
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
-  const domain = searchParams.get('domain');
+  const registrar = searchParams.get('registrar');
   const extension = searchParams.get('extension');
 
-  // If no domain or extension provided, return latest registrars
-  if (!domain || !extension) {
-    try {
-      const latestRegistrars = await prisma.reg.findMany({
-        orderBy: {
-          created_at: 'desc'
-        },
-        take: 20
-      });
-
-      return NextResponse.json({
-        type: 'registrars',
-        registrars: latestRegistrars,
-        totalResults: latestRegistrars.length,
-        message: 'Latest registrars'
-      });
-    } catch (error) {
-      console.error('Error fetching registrars:', error);
-      return NextResponse.json({
-        type: 'registrars',
-        registrars: [],
-        totalResults: 0,
-        message: 'Error fetching registrars'
-      }, { status: 500 });
-    }
-  }
-
   try {
-    // Find the TLD by extension
-    const tld = await prisma.tld.findFirst({
-      where: {
-        name: extension.startsWith('.') ? extension : `.${extension}`
-      }
-    });
-
-    if (!tld) {
-      return NextResponse.json({
-        domain: `${domain}${extension}`,
-        tld: extension,
-        searchQuery: { domain, extension },
-        prices: [],
-        totalResults: 0,
-        message: 'TLD not found'
+    // Build dynamic where conditions
+    const whereConditions: any = {};
+    
+    if (registrar) {
+      const regRecord = await prisma.reg.findFirst({
+        where: { name: { contains: registrar } }
       });
+      if (regRecord) {
+        whereConditions.reg_id = Number(regRecord.id);
+      }
+    }
+    
+    if (extension) {
+      const tldRecord = await prisma.tld.findFirst({
+        where: { 
+          name: extension.startsWith('.') ? extension : `.${extension}`
+        }
+      });
+      if (tldRecord) {
+        whereConditions.tld_id = Number(tldRecord.id);
+      }
     }
 
-    // Get prices for this TLD
+    // Get all matching prices
     const prices = await prisma.price.findMany({
-      where: {
-        tld_id: Number(tld.id)
-      },
-      include: {
-        reg: true
-      }
+      where: Object.keys(whereConditions).length > 0 ? whereConditions : undefined,
+      orderBy: [
+        { reg_id: 'asc' },
+        { tld_id: 'asc' },
+        { reg_price: 'asc' }
+      ]
     });
 
-    if (prices.length === 0) {
-      return NextResponse.json({
-        domain: `${domain}${extension}`,
-        tld: extension,
-        searchQuery: { domain, extension },
-        prices: [],
-        totalResults: 0,
-        message: 'No pricing data found for this TLD'
-      });
-    }
+    // Get registrar and TLD info
+    const pricesWithDetails = await Promise.all(
+      prices.map(async (price) => {
+        const [reg, tld] = await Promise.all([
+          prisma.reg.findUnique({ where: { id: BigInt(price.reg_id) } }),
+          prisma.tld.findUnique({ where: { id: BigInt(price.tld_id) } })
+        ]);
+        return {
+          ...price,
+          registrar: reg,
+          tld
+        };
+      })
+    );
 
-    // Format the response
-    const formattedPrices = prices.map(price => ({
-      registrar: price.reg.name,
+    const formattedPrices = pricesWithDetails.map(price => ({
+      registrar: price.registrar?.name || 'Unknown',
+      extension: price.tld?.name || 'Unknown',
       registrationPrice: Number(price.reg_price),
       renewalPrice: Number(price.renew_price),
       transferPrice: Number(price.transfer_price),
       currency: 'USD',
-      logo: `https://logo.clearbit.com/${price.reg.name.toLowerCase().replace(' ', '')}.com`
+      logo: `https://logo.clearbit.com/${price.registrar?.name?.toLowerCase().replace(' ', '') || 'unknown'}.com`
     }));
 
     return NextResponse.json({
-      domain: `${domain}${extension}`,
-      tld: extension,
-      searchQuery: { domain, extension },
       prices: formattedPrices,
-      totalResults: formattedPrices.length
+      totalResults: formattedPrices.length,
+      filters: { registrar, extension },
+      message: `Found ${formattedPrices.length} price records`
     });
   } catch (error) {
     console.error('Error fetching prices:', error);
-    
     return NextResponse.json({
-      domain: `${domain}${extension}`,
-      tld: extension,
-      searchQuery: { domain, extension },
       prices: [],
       totalResults: 0,
       message: 'Error fetching pricing data',
