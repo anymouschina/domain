@@ -6,11 +6,31 @@ export async function GET(request: NextRequest) {
   const domain = searchParams.get('domain');
   const extension = searchParams.get('extension');
 
+  // If no domain or extension provided, return latest registrars
   if (!domain || !extension) {
-    return NextResponse.json(
-      { error: 'Domain and extension parameters are required' },
-      { status: 400 }
-    );
+    try {
+      const latestRegistrars = await prisma.reg.findMany({
+        orderBy: {
+          created_at: 'desc'
+        },
+        take: 20
+      });
+
+      return NextResponse.json({
+        type: 'registrars',
+        registrars: latestRegistrars,
+        totalResults: latestRegistrars.length,
+        message: 'Latest registrars'
+      });
+    } catch (error) {
+      console.error('Error fetching registrars:', error);
+      return NextResponse.json({
+        type: 'registrars',
+        registrars: [],
+        totalResults: 0,
+        message: 'Error fetching registrars'
+      }, { status: 500 });
+    }
   }
 
   try {
@@ -22,47 +42,20 @@ export async function GET(request: NextRequest) {
     });
 
     if (!tld) {
-      // Return mock data if TLD not found
-      return NextResponse.json([
-        {
-          registrar: 'Namecheap',
-          registrationPrice: 8.88,
-          renewalPrice: 13.98,
-          transferPrice: 9.58,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/namecheap.com'
-        },
-        {
-          registrar: 'GoDaddy',
-          registrationPrice: 11.99,
-          renewalPrice: 18.99,
-          transferPrice: 7.99,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/godaddy.com'
-        },
-        {
-          registrar: 'Google Domains',
-          registrationPrice: 12.00,
-          renewalPrice: 12.00,
-          transferPrice: 12.00,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/domains.google'
-        },
-        {
-          registrar: 'Cloudflare',
-          registrationPrice: 9.77,
-          renewalPrice: 9.77,
-          transferPrice: 9.77,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/cloudflare.com'
-        }
-      ]);
+      return NextResponse.json({
+        domain: `${domain}${extension}`,
+        tld: extension,
+        searchQuery: { domain, extension },
+        prices: [],
+        totalResults: 0,
+        message: 'TLD not found'
+      });
     }
 
     // Get prices for this TLD
     const prices = await prisma.price.findMany({
       where: {
-        tld_id: tld.id
+        tld_id: Number(tld.id)
       },
       include: {
         reg: true
@@ -70,41 +63,14 @@ export async function GET(request: NextRequest) {
     });
 
     if (prices.length === 0) {
-      // Return mock data if no prices found
-      return NextResponse.json([
-        {
-          registrar: 'Namecheap',
-          registrationPrice: 8.88,
-          renewalPrice: 13.98,
-          transferPrice: 9.58,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/namecheap.com'
-        },
-        {
-          registrar: 'GoDaddy',
-          registrationPrice: 11.99,
-          renewalPrice: 18.99,
-          transferPrice: 7.99,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/godaddy.com'
-        },
-        {
-          registrar: 'Google Domains',
-          registrationPrice: 12.00,
-          renewalPrice: 12.00,
-          transferPrice: 12.00,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/domains.google'
-        },
-        {
-          registrar: 'Cloudflare',
-          registrationPrice: 9.77,
-          renewalPrice: 9.77,
-          transferPrice: 9.77,
-          currency: 'USD',
-          logo: 'https://logo.clearbit.com/cloudflare.com'
-        }
-      ]);
+      return NextResponse.json({
+        domain: `${domain}${extension}`,
+        tld: extension,
+        searchQuery: { domain, extension },
+        prices: [],
+        totalResults: 0,
+        message: 'No pricing data found for this TLD'
+      });
     }
 
     // Format the response
@@ -113,47 +79,28 @@ export async function GET(request: NextRequest) {
       registrationPrice: Number(price.reg_price),
       renewalPrice: Number(price.renew_price),
       transferPrice: Number(price.transfer_price),
-      currency: 'USD'
+      currency: 'USD',
+      logo: `https://logo.clearbit.com/${price.reg.name.toLowerCase().replace(' ', '')}.com`
     }));
 
-    return NextResponse.json(formattedPrices);
+    return NextResponse.json({
+      domain: `${domain}${extension}`,
+      tld: extension,
+      searchQuery: { domain, extension },
+      prices: formattedPrices,
+      totalResults: formattedPrices.length
+    });
   } catch (error) {
     console.error('Error fetching prices:', error);
     
-    // Return mock data on error
-    return NextResponse.json([
-      {
-        registrar: 'Namecheap',
-        registrationPrice: 8.88,
-        renewalPrice: 13.98,
-        transferPrice: 9.58,
-        currency: 'USD',
-        logo: 'https://logo.clearbit.com/namecheap.com'
-      },
-      {
-        registrar: 'GoDaddy',
-        registrationPrice: 11.99,
-        renewalPrice: 18.99,
-        transferPrice: 7.99,
-        currency: 'USD',
-        logo: 'https://logo.clearbit.com/godaddy.com'
-      },
-      {
-        registrar: 'Google Domains',
-        registrationPrice: 12.00,
-        renewalPrice: 12.00,
-        transferPrice: 12.00,
-        currency: 'USD',
-        logo: 'https://logo.clearbit.com/domains.google'
-      },
-      {
-        registrar: 'Cloudflare',
-        registrationPrice: 9.77,
-        renewalPrice: 9.77,
-        transferPrice: 9.77,
-        currency: 'USD',
-        logo: 'https://logo.clearbit.com/cloudflare.com'
-      }
-    ]);
+    return NextResponse.json({
+      domain: `${domain}${extension}`,
+      tld: extension,
+      searchQuery: { domain, extension },
+      prices: [],
+      totalResults: 0,
+      message: 'Error fetching pricing data',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 }

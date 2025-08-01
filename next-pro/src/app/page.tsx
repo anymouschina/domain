@@ -27,7 +27,7 @@ export default function Home() {
     try {
       const response = await fetch(`/api/prices?domain=${domain}&extension=${extension}`);
       const data = await response.json();
-      setPrices(data);
+      setPrices(data.prices || []);
     } catch (error) {
       console.error('Error fetching prices:', error);
       setPrices([]);
