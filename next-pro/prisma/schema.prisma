@@ -1,0 +1,56 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model migrations {
+  id        Int    @id @default(autoincrement()) @db.UnsignedInt
+  migration String @db.VarChar(255)
+  batch     Int
+}
+
+model price {
+  id             BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  reg_id         Int       @default(0) @db.UnsignedInt
+  tld_id         Int       @default(0) @db.UnsignedInt
+  reg_price      Decimal   @default(0.00) @db.Decimal(10, 2)
+  renew_price    Decimal   @default(0.00) @db.Decimal(10, 2)
+  transfer_price Decimal   @default(0.00) @db.Decimal(10, 2)
+  created_at     DateTime? @db.Timestamp(0)
+  updated_at     DateTime? @db.Timestamp(0)
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
+model promo {
+  id                   BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  tld_id               Int       @db.UnsignedInt
+  reg_id               Int       @db.UnsignedInt
+  code                 String    @default("") @db.VarChar(255)
+  price                Decimal   @default(0.00) @db.Decimal(10, 2)
+  is_limit             Int       @default(0) @db.UnsignedInt
+  is_only_for_new_user Int       @default(0) @db.UnsignedInt
+  created_at           DateTime? @db.Timestamp(0)
+  updated_at           DateTime? @db.Timestamp(0)
+  type                 Int       @default(0) @db.TinyInt
+}
+
+model reg {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @default("") @db.VarChar(255)
+  status     Int       @default(0) @db.TinyInt
+  icann_fee  Decimal   @default(0.00) @db.Decimal(10, 2)
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
+
+model tld {
+  id         BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  name       String    @default("") @db.VarChar(255)
+  status     Int       @default(0) @db.TinyInt
+  created_at DateTime? @db.Timestamp(0)
+  updated_at DateTime? @db.Timestamp(0)
+}
