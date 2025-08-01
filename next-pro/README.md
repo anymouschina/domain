@@ -1,36 +1,101 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Domain Price Checker
+
+A Next.js application for comparing domain registration prices across different registrars, similar to tldes.com.
+
+## Features
+
+- **Responsive Design**: Works on both desktop and mobile devices
+- **Real-time Price Comparison**: Compare prices from multiple registrars
+- **Clean UI**: Modern, responsive interface built with Tailwind CSS
+- **MySQL Database**: Stores domain pricing data
+- **Adminer Integration**: Web-based database administration tool
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, TypeScript, Tailwind CSS
+- **Backend**: Next.js API Routes, Prisma ORM
+- **Database**: MySQL 8.0
+- **Development**: Docker Compose for MySQL and Adminer
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- Node.js 18+ 
+- Docker and Docker Compose
+
+### Installation
+
+1. **Clone and install dependencies**:
+   ```bash
+   npm install
+   ```
+
+2. **Start MySQL and Adminer with Docker**:
+   ```bash
+   docker-compose up -d
+   ```
+
+3. **Access Adminer**:
+   - Open http://localhost:8081
+   - Server: db
+   - Username: domain_user
+   - Password: domain_password
+   - Database: domain_pricing
+
+4. **Start the development server**:
+   ```bash
+   npm run dev
+   ```
+
+5. **Open the application**:
+   - Navigate to http://localhost:3000
+
+### Database Setup
+
+The database is automatically configured with Docker Compose. The schema includes:
+
+- **reg**: Registrars table
+- **tld**: Top-level domains table
+- **price**: Domain pricing data
+- **promo**: Promotional codes and discounts
+
+### Environment Variables
+
+The project uses a `.env` file with the following configuration:
+
+```env
+DATABASE_URL="mysql://domain_user:domain_password@localhost:3307/domain_pricing"
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="your-secret-key-here"
+NODE_ENV="development"
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Docker Services
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- **MySQL**: Runs on port 3307 (mapped to container port 3306)
+- **Adminer**: Web interface available on http://localhost:8081
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Usage
 
-## Learn More
+1. **Search for a domain**: Enter your desired domain name and extension
+2. **Compare prices**: View pricing from different registrars
+3. **Choose the best deal**: Compare registration, renewal, and transfer prices
 
-To learn more about Next.js, take a look at the following resources:
+## Development
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- **Hot reloading**: Enabled for both frontend and backend
+- **TypeScript**: Full type safety throughout the application
+- **Responsive design**: Mobile-first approach with Tailwind CSS
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## API Endpoints
 
-## Deploy on Vercel
+- `GET /api/prices?domain=<domain>&extension=<extension>`: Get pricing data for a domain
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Database Access
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Access the database via Adminer at http://localhost:8081 with these credentials:
+- **Server**: db
+- **Username**: domain_user
+- **Password**: domain_password
+- **Database**: domain_pricing

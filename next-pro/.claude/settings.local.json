@@ -4,7 +4,10 @@
     "allow": [
       "Bash(npm install)",
       "Bash(npm install:*)",
-      "Bash(docker-compose:*)"
+      "Bash(docker-compose:*)",
+      "Bash(mkdir:*)",
+      "Bash(npm run dev)",
+      "Bash(npm run dev:*)"
     ],
     "deny": []
   }
