@@ -41,7 +41,7 @@ export default function TldPriceFilter({ onFilter, loading }: TldPriceFilterProp
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <label htmlFor="registrar" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              注册商 (可选)
+              Registrar (Optional)
             </label>
             <select
               id="registrar"
@@ -49,7 +49,7 @@ export default function TldPriceFilter({ onFilter, loading }: TldPriceFilterProp
               onChange={(e) => setRegistrar(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
-              <option value="">所有注册商</option>
+              <option value="">All Registrars</option>
               {popularRegistrars.map((reg) => (
                 <option key={reg} value={reg}>
                   {reg}
@@ -60,7 +60,7 @@ export default function TldPriceFilter({ onFilter, loading }: TldPriceFilterProp
           
           <div>
             <label htmlFor="extension" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-              域名后缀 (可选)
+              Domain Extension (Optional)
             </label>
             <select
               id="extension"
@@ -68,7 +68,7 @@ export default function TldPriceFilter({ onFilter, loading }: TldPriceFilterProp
               onChange={(e) => setExtension(e.target.value)}
               className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
             >
-              <option value="">所有后缀</option>
+              <option value="">All Extensions</option>
               {popularExtensions.map((ext) => (
                 <option key={ext} value={ext}>
                   {ext}
@@ -84,7 +84,7 @@ export default function TldPriceFilter({ onFilter, loading }: TldPriceFilterProp
             disabled={loading}
             className="px-6 py-3 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
-            {loading ? '查询中...' : '查询价格'}
+            {loading ? 'Searching...' : 'Search Prices'}
           </button>
           
           <button
@@ -93,7 +93,7 @@ export default function TldPriceFilter({ onFilter, loading }: TldPriceFilterProp
             disabled={loading}
             className="px-6 py-3 bg-gray-500 text-white font-medium rounded-lg hover:bg-gray-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
           >
-            清空
+            Clear
           </button>
         </div>
       </form>

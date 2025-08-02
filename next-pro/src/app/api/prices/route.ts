@@ -11,7 +11,7 @@ export async function GET(request: NextRequest) {
   const sortOrder = searchParams.get('sortOrder') || 'asc';
 
   try {
-    // 构建动态WHERE条件
+    // Build dynamic WHERE conditions
     const whereConditions: string[] = [];
     
     if (registrar) {
@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
       if (regRecords.length > 0) {
         whereConditions.push(`reg_id IN (${regRecords.map(r => r.id).join(',')})`);
       } else {
-        // 如果没有匹配的注册商，添加一个不可能的条件
+        // If no matching registrar found, add an impossible condition
         whereConditions.push('reg_id = 0');
       }
     }
@@ -35,12 +35,12 @@ export async function GET(request: NextRequest) {
       if (tldRecords.length > 0) {
         whereConditions.push(`tld_id IN (${tldRecords.map(t => t.id).join(',')})`);
       } else {
-        // 如果没有匹配的域名后缀，添加一个不可能的条件
+        // If no matching domain extension found, add an impossible condition
         whereConditions.push('tld_id = 0');
       }
     }
 
-    // 使用窗口函数获取每个reg_id的最新记录（性能优化版本）
+    // Use window function to get the latest record for each reg_id (performance optimized version)
     const offset = (page - 1) * limit;
     
     const rawQuery = `

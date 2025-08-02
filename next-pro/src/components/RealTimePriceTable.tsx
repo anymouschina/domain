@@ -22,6 +22,10 @@ interface Pagination {
   hasPrev: boolean;
 }
 
+interface TldData {
+  name: string;
+}
+
 export default function RealTimePriceTable() {
   const [prices, setPrices] = useState<PriceData[]>([]);
   const [loading, setLoading] = useState(false);
@@ -42,11 +46,11 @@ export default function RealTimePriceTable() {
 
   const [extensions, setExtensions] = useState(['.net', '.org', '.info', '.co', '.io', '.xyz', '.com']);
 
-  // 防抖处理筛选条件变化
+  // Debounce filter condition changes
   const [debouncedRegistrarFilter, setDebouncedRegistrarFilter] = useState(registrarFilter);
   const [debouncedExtensionFilter, setDebouncedExtensionFilter] = useState(extensionFilter);
 
-  // 防抖注册商筛选
+  // Debounce registrar filter
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedRegistrarFilter(registrarFilter);
@@ -54,7 +58,7 @@ export default function RealTimePriceTable() {
     return () => clearTimeout(timer);
   }, [registrarFilter]);
 
-  // 防抖域名后缀筛选
+  // Debounce domain extension filter
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedExtensionFilter(extensionFilter);
@@ -62,7 +66,7 @@ export default function RealTimePriceTable() {
     return () => clearTimeout(timer);
   }, [extensionFilter]);
 
-  // 从URL读取参数并设置筛选条件
+  // Read parameters from URL and set filter conditions
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlExtension = urlParams.get('extension');
@@ -103,7 +107,7 @@ export default function RealTimePriceTable() {
     }
   }, []);
 
-  // 当筛选条件变化时更新URL
+  // Update URL when filter conditions change
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     
@@ -141,12 +145,12 @@ export default function RealTimePriceTable() {
     window.history.replaceState(null, '', newUrl);
   }, [extensionFilter, registrarFilter, page, sortBy, sortOrder]);
 
-  // 当防抖后的筛选条件变化时重置到第一页
+  // Reset to first page when debounced filter conditions change
   useEffect(() => {
     setPage(1);
   }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder]);
 
-  // 实时加载数据
+  // Load data in real-time
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
@@ -181,13 +185,14 @@ export default function RealTimePriceTable() {
 
     loadData();
   }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder, page]);
+  
   useEffect(() => {
     const loadTlds = async () => {
       try {
         const response = await fetch(`/api/tlds`);
         const data = await response.json();
         if (data.tlds && Array.isArray(data.tlds)) {
-          setExtensions(data.tlds.map((tld: any) => tld.name));
+          setExtensions(data.tlds.map((tld: TldData) => tld.name));
         }
       } catch (error) {
         console.error('Error loading TLDs:', error);
@@ -195,6 +200,7 @@ export default function RealTimePriceTable() {
     }
     loadTlds();
   }, []);
+  
   const handleSort = (newSortBy: 'registrar' | 'extension' | 'price') => {
     if (sortBy === newSortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -224,24 +230,24 @@ export default function RealTimePriceTable() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-      {/* 当前查询后缀显示 */}
+      {/* Current query extension display */}
       <div className="mb-4 text-center">
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-          当前查询后缀：<span className="text-blue-600">{currentExtension === '' ? '所有后缀' : currentExtension}</span>
+          Current Query Extension: <span className="text-blue-600">{currentExtension === '' ? 'All Extensions' : currentExtension}</span>
         </h2>
       </div>
 
-      {/* 筛选器 */}
+      {/* Filters */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
         <div className="p-6">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                注册商筛选
+                Registrar Filter
               </label>
               <input
                 type="text"
-                placeholder="输入注册商名称"
+                placeholder="Enter registrar name"
                 value={registrarFilter}
                 onChange={(e) => setRegistrarFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
@@ -250,7 +256,7 @@ export default function RealTimePriceTable() {
             
             {/* <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                域名后缀
+                Domain Extension
               </label>
               <select
                 value={extensionFilter}
@@ -260,7 +266,7 @@ export default function RealTimePriceTable() {
                 }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                <option value="">所有后缀</option>
+                <option value="">All Extensions</option>
                 {extensions.map((ext) => (
                   <option key={ext} value={ext}>{ext}</option>
                 ))}
@@ -269,14 +275,14 @@ export default function RealTimePriceTable() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                分页: {pagination.totalCount} 条记录
+                Pagination: {pagination.totalCount} records
               </label>
               <div className="flex gap-2">
                 <button
                   onClick={handleClear}
                   className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
                 >
-                  清空
+                  Clear
                 </button>
               </div>
             </div>
@@ -284,7 +290,7 @@ export default function RealTimePriceTable() {
         </div>
       </div>
 
-      {/* 价格表格 */}
+      {/* Price table */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
@@ -294,25 +300,25 @@ export default function RealTimePriceTable() {
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                   onClick={() => handleSort('registrar')}
                 >
-                  注册商 {getSortIcon('registrar')}
+                  Registrar {getSortIcon('registrar')}
                 </th>
                 {/* <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                   onClick={() => handleSort('extension')}
                 >
-                  域名后缀 {getSortIcon('extension')}
+                  Domain Extension {getSortIcon('extension')}
                 </th> */}
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                   onClick={() => handleSort('price')}
                 >
-                  注册价格 {getSortIcon('price')}
+                  Registration Price {getSortIcon('price')}
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  续费价格
+                  Renewal Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  转移价格
+                  Transfer Price
                 </th>
               </tr>
             </thead>
@@ -362,7 +368,7 @@ export default function RealTimePriceTable() {
           </table>
         </div>
         
-        {/* 分页控件 */}
+        {/* Pagination controls */}
         {pagination.totalPages > 1 && (
           <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
             <div className="flex-1 flex justify-between sm:hidden">
@@ -371,22 +377,22 @@ export default function RealTimePriceTable() {
                 disabled={!pagination.hasPrev}
                 className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                上一页
+                Previous
               </button>
               <button
                 onClick={() => handlePageChange(pagination.page + 1)}
                 disabled={!pagination.hasNext}
                 className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                下一页
+                Next
               </button>
             </div>
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">
-                  显示第 <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> 到 
-                  <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.totalCount)}</span> 条，
-                  共 <span className="font-medium">{pagination.totalCount}</span> 条记录
+                  Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to 
+                  <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.totalCount)}</span> of 
+                  <span className="font-medium">{pagination.totalCount}</span> records
                 </p>
               </div>
               <div>
@@ -396,7 +402,7 @@ export default function RealTimePriceTable() {
                     disabled={!pagination.hasPrev}
                     className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    上一页
+                    Previous
                   </button>
                   
                   {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
@@ -431,7 +437,7 @@ export default function RealTimePriceTable() {
                     disabled={!pagination.hasNext}
                     className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    下一页
+                    Next
                   </button>
                 </nav>
               </div>
@@ -441,7 +447,7 @@ export default function RealTimePriceTable() {
         
         {prices.length === 0 && !loading && (
           <div className="text-center py-12">
-            <p className="text-gray-500 dark:text-gray-400">没有找到符合条件的价格数据</p>
+            <p className="text-gray-500 dark:text-gray-400">No price data found matching the criteria</p>
           </div>
         )}
       </div>

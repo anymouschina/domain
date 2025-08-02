@@ -8,50 +8,50 @@ export default function Home() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center mb-8">
           <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 dark:text-white mb-4">
-            域名注册价格对比
+            Domain Registration Price Comparison
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            实时比较各大注册商提供的域名后缀价格，找到最便宜的注册商
+            Compare domain extension prices from major registrars in real-time to find the cheapest registrar
           </p>
         </div>
 
         <RealTimePriceTable />
 
-        {/* 导航到最便宜注册商页面 */}
+        {/* Navigation to cheapest registrars page */}
         <div className="mt-8 text-center">
           <a 
             href="/cheapest-tlds"
             className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 transition-colors"
           >
-            查看各域名后缀最便宜注册商 →
+            View Cheapest Registrars for Each Domain Extension →
           </a>
         </div>
 
         <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              实时筛选
+              Real-time Filtering
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              输入注册商名称或选择域名后缀，数据实时更新
+              Enter registrar name or select domain extension, data updates in real-time
             </p>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              智能排序
+              Smart Sorting
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              支持按注册商首字母和注册价格正序/倒序排序
+              Support sorting by registrar first letter and registration price in ascending/descending order
             </p>
           </div>
 
           <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-sm border border-gray-200 dark:border-gray-700">
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
-              数据全面
+              Comprehensive Data
             </h3>
             <p className="text-gray-600 dark:text-gray-400">
-              涵盖主流注册商和热门域名后缀的完整价格信息
+              Complete pricing information covering major registrars and popular domain extensions
             </p>
           </div>
         </div>

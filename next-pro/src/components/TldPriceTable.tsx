@@ -23,7 +23,7 @@ export default function TldPriceTable({ prices, loading, registrarFilter, extens
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">正在加载价格数据...</p>
+          <p className="mt-2 text-gray-600">Loading price data...</p>
         </div>
       </div>
     );
@@ -34,10 +34,10 @@ export default function TldPriceTable({ prices, loading, registrarFilter, extens
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="text-center bg-white dark:bg-gray-800 p-8 rounded-lg shadow-sm border">
           <div className="text-gray-500 dark:text-gray-400 text-lg">
-            没有找到符合条件的价格数据
+            No price data found matching the criteria
           </div>
           <p className="text-gray-400 dark:text-gray-500 mt-2">
-            请尝试调整筛选条件
+            Please try adjusting the filter conditions
           </p>
         </div>
       </div>
@@ -58,10 +58,10 @@ export default function TldPriceTable({ prices, loading, registrarFilter, extens
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-            注册商价格对比
+            Registrar Price Comparison
           </h2>
           <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
-            共找到 {prices.length} 条价格记录
+            Found {prices.length} price records
           </p>
         </div>
 
@@ -70,19 +70,19 @@ export default function TldPriceTable({ prices, loading, registrarFilter, extens
             <thead className="bg-gray-50 dark:bg-gray-700">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  注册商
+                  Registrar
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  域名后缀
+                  Domain Extension
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  注册价格
+                  Registration Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  续费价格
+                  Renewal Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
-                  转移价格
+                  Transfer Price
                 </th>
               </tr>
             </thead>
