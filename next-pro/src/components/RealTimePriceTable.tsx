@@ -13,15 +13,6 @@ interface PriceData {
   logo?: string;
 }
 
-interface Pagination {
-  page: number;
-  limit: number;
-  totalCount: number;
-  totalPages: number;
-  hasNext: boolean;
-  hasPrev: boolean;
-}
-
 interface TldData {
   name: string;
 }
@@ -30,21 +21,16 @@ export default function RealTimePriceTable() {
   const [prices, setPrices] = useState<PriceData[]>([]);
   const [loading, setLoading] = useState(false);
   const [registrarFilter, setRegistrarFilter] = useState('');
-  const [extensionFilter, setExtensionFilter] = useState('');
+  const [extensionFilter, setExtensionFilter] = useState('com');
   const [sortBy, setSortBy] = useState<'registrar' | 'extension' | 'price'>('registrar');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
-  const [page, setPage] = useState(1);
-  const [currentExtension, setCurrentExtension] = useState('.com');
-  const [pagination, setPagination] = useState<Pagination>({
-    page: 1,
-    limit: 20,
-    totalCount: 0,
-    totalPages: 1,
-    hasNext: false,
-    hasPrev: false
-  });
+  const [currentExtension, setCurrentExtension] = useState('com');
+  const [expanded, setExpanded] = useState(false);
+  const [totalCount, setTotalCount] = useState(0);
+  const [hasMore, setHasMore] = useState(false);
 
-  const [extensions, setExtensions] = useState(['.net', '.org', '.info', '.co', '.io', '.xyz', '.com']);
+  // 每次加载的数量
+  const PAGE_SIZE = 20;
 
   // Debounce filter condition changes
   const [debouncedRegistrarFilter, setDebouncedRegistrarFilter] = useState(registrarFilter);
@@ -66,12 +52,17 @@ export default function RealTimePriceTable() {
     return () => clearTimeout(timer);
   }, [extensionFilter]);
 
+  // 当筛选条件或排序方式改变时，重置展开状态和数据
+  useEffect(() => {
+    setExpanded(false);
+    setPrices([]);
+  }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder]);
+
   // Read parameters from URL and set filter conditions
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlExtension = urlParams.get('extension');
     const urlRegistrar = urlParams.get('registrar');
-    const urlPage = urlParams.get('page');
     const urlSortBy = urlParams.get('sortBy');
     const urlSortOrder = urlParams.get('sortOrder');
 
@@ -79,30 +70,23 @@ export default function RealTimePriceTable() {
       setExtensionFilter(urlExtension);
       setCurrentExtension(urlExtension);
     } else {
-      setExtensionFilter('.com');
-      setCurrentExtension('.com');
+      setExtensionFilter('com');
+      setCurrentExtension('com');
     }
 
     if (urlRegistrar) {
       setRegistrarFilter(urlRegistrar);
     }
 
-    if (urlPage) {
-      const pageNum = parseInt(urlPage);
-      if (!isNaN(pageNum) && pageNum > 0) {
-        setPage(pageNum);
-      }
-    }
-
     if (urlSortBy) {
       if (urlSortBy === 'registrar' || urlSortBy === 'extension' || urlSortBy === 'price') {
-        setSortBy(urlSortBy);
+        setSortBy(urlSortBy as 'registrar' | 'extension' | 'price');
       }
     }
 
     if (urlSortOrder) {
       if (urlSortOrder === 'asc' || urlSortOrder === 'desc') {
-        setSortOrder(urlSortOrder);
+        setSortOrder(urlSortOrder as 'asc' | 'desc');
       }
     }
   }, []);
@@ -111,7 +95,7 @@ export default function RealTimePriceTable() {
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     
-    if (extensionFilter && extensionFilter !== '.com') {
+    if (extensionFilter && extensionFilter !== 'com') {
       urlParams.set('extension', extensionFilter);
     } else {
       urlParams.delete('extension');
@@ -121,12 +105,6 @@ export default function RealTimePriceTable() {
       urlParams.set('registrar', registrarFilter);
     } else {
       urlParams.delete('registrar');
-    }
-
-    if (page > 1) {
-      urlParams.set('page', page.toString());
-    } else {
-      urlParams.delete('page');
     }
 
     if (sortBy !== 'registrar') {
@@ -143,63 +121,49 @@ export default function RealTimePriceTable() {
 
     const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
     window.history.replaceState(null, '', newUrl);
-  }, [extensionFilter, registrarFilter, page, sortBy, sortOrder]);
+  }, [extensionFilter, registrarFilter, sortBy, sortOrder]);
 
-  // Reset to first page when debounced filter conditions change
-  useEffect(() => {
-    setPage(1);
-  }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder]);
-
-  // Load data in real-time
-  useEffect(() => {
-    const loadData = async () => {
-      setLoading(true);
-      try {
-        const params = new URLSearchParams();
-        if (debouncedRegistrarFilter) params.append('registrar', debouncedRegistrarFilter);
-        if (debouncedExtensionFilter) params.append('extension', debouncedExtensionFilter);
-        params.append('sortBy', sortBy);
-        params.append('sortOrder', sortOrder);
-        params.append('page', page.toString());
-        params.append('limit', '20');
-        
-        const response = await fetch(`/api/prices?${params.toString()}`);
-    
-        const data = await response.json();
-        setPrices(data.prices || []);
-        setPagination(data.pagination || {
-          page: 1,
-          limit: 20,
-          totalCount: 0,
-          totalPages: 1,
-          hasNext: false,
-          hasPrev: false
-        });
-      } catch (error) {
-        console.error('Error fetching prices:', error);
-        setPrices([]);
-      } finally {
-        setLoading(false);
+  // Load data - initial load or expand all
+  const loadData = useCallback(async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams();
+      if (debouncedRegistrarFilter) params.append('registrar', debouncedRegistrarFilter);
+      if (debouncedExtensionFilter) params.append('extension', debouncedExtensionFilter);
+      params.append('sortBy', sortBy);
+      params.append('sortOrder', sortOrder);
+      
+      // 如果展开全部，则不限制数量，否则只加载一页
+      if (!expanded) {
+        params.append('limit', PAGE_SIZE.toString());
+        params.append('page', '1');
+      } else {
+        // 可以根据实际API情况调整，这里假设使用很大的数字来获取全部
+        params.append('limit', '10000');
+        params.append('page', '1');
       }
-    };
-
-    loadData();
-  }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder, page]);
-  
-  useEffect(() => {
-    const loadTlds = async () => {
-      try {
-        const response = await fetch(`/api/tlds`);
-        const data = await response.json();
-        if (data.tlds && Array.isArray(data.tlds)) {
-          setExtensions(data.tlds.map((tld: TldData) => tld.name));
-        }
-      } catch (error) {
-        console.error('Error loading TLDs:', error);
-      }
+      
+      const response = await fetch(`/api/prices?${params.toString()}`);
+      const data = await response.json();
+      
+      // 更新总数和是否有更多数据
+      setTotalCount(data.pagination?.totalCount || 0);
+      setHasMore(data.pagination?.totalCount > PAGE_SIZE);
+      
+      // 如果是展开全部，直接替换数据，否则初始加载
+      setPrices(data.prices || []);
+    } catch (error) {
+      console.error('Error fetching prices:', error);
+      setPrices([]);
+    } finally {
+      setLoading(false);
     }
-    loadTlds();
-  }, []);
+  }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder, expanded]);
+
+  // 初始加载数据
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
   
   const handleSort = (newSortBy: 'registrar' | 'extension' | 'price') => {
     if (sortBy === newSortBy) {
@@ -208,18 +172,15 @@ export default function RealTimePriceTable() {
       setSortBy(newSortBy);
       setSortOrder('asc');
     }
-    setPage(1);
   };
 
-  const handlePageChange = (newPage: number) => {
-    setPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  const handleExpand = () => {
+    setExpanded(true);
   };
 
   const handleClear = () => {
     setRegistrarFilter('');
     setExtensionFilter('');
-    setPage(1);
   };
 
   const getSortIcon = (column: 'registrar' | 'extension' | 'price') => {
@@ -254,28 +215,9 @@ export default function RealTimePriceTable() {
               />
             </div>
             
-            {/* <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Domain Extension
-              </label>
-              <select
-                value={extensionFilter}
-                onChange={(e) => {
-                  setExtensionFilter(e.target.value);
-                  setCurrentExtension(e.target.value || '.com');
-                }}
-                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
-              >
-                <option value="">All Extensions</option>
-                {extensions.map((ext) => (
-                  <option key={ext} value={ext}>{ext}</option>
-                ))}
-              </select>
-            </div> */}
-
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                Pagination: {pagination.totalCount} records
+                Total Records: {totalCount}
               </label>
               <div className="flex gap-2">
                 <button
@@ -302,12 +244,6 @@ export default function RealTimePriceTable() {
                 >
                   Registrar {getSortIcon('registrar')}
                 </th>
-                {/* <th 
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
-                  onClick={() => handleSort('extension')}
-                >
-                  Domain Extension {getSortIcon('extension')}
-                </th> */}
                 <th 
                   className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-600 transition-colors"
                   onClick={() => handleSort('price')}
@@ -327,26 +263,11 @@ export default function RealTimePriceTable() {
                 <tr key={`${price.registrar}-${price.extension}-${price.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      {/* {price.logo && (
-                        <img 
-                          src={price.logo} 
-                          alt={price.registrar}
-                          className="h-8 w-8 rounded mr-3"
-                          onError={(e) => {
-                            e.currentTarget.style.display = 'none';
-                          }}
-                        />
-                      )} */}
                       <a href={`https://${price.registrar}`} target='_blank' className="text-sm font-medium text-blue-900 dark:text-white">
                         {price.registrar}
                       </a>
                     </div>
                   </td>
-                  {/* <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
-                      {price.extension}
-                    </div>
-                  </td> */}
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 dark:text-white font-medium text-green-600">
                       ${price.registrationPrice}
@@ -368,86 +289,28 @@ export default function RealTimePriceTable() {
           </table>
         </div>
         
-        {/* Pagination controls */}
-        {pagination.totalPages > 1 && (
-          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => handlePageChange(pagination.page - 1)}
-                disabled={!pagination.hasPrev}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
-              <button
-                onClick={() => handlePageChange(pagination.page + 1)}
-                disabled={!pagination.hasNext}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700 dark:text-gray-300">
-                  Showing <span className="font-medium">{(pagination.page - 1) * pagination.limit + 1}</span> to 
-                  <span className="font-medium">{Math.min(pagination.page * pagination.limit, pagination.totalCount)}</span> of 
-                  <span className="font-medium">{pagination.totalCount}</span> records
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button
-                    onClick={() => handlePageChange(pagination.page - 1)}
-                    disabled={!pagination.hasPrev}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  
-                  {Array.from({ length: Math.min(pagination.totalPages, 5) }, (_, i) => {
-                    let pageNum;
-                    if (pagination.totalPages <= 5) {
-                      pageNum = i + 1;
-                    } else if (pagination.page <= 3) {
-                      pageNum = i + 1;
-                    } else if (pagination.page >= pagination.totalPages - 2) {
-                      pageNum = pagination.totalPages - 4 + i;
-                    } else {
-                      pageNum = pagination.page - 2 + i;
-                    }
-                    
-                    return (
-                      <button
-                        key={pageNum}
-                        onClick={() => handlePageChange(pageNum)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          pageNum === pagination.page
-                            ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                            : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNum}
-                      </button>
-                    );
-                  })}
-                  
-                  <button
-                    onClick={() => handlePageChange(pagination.page + 1)}
-                    disabled={!pagination.hasNext}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </nav>
-              </div>
-            </div>
+        {/* Expand all button */}
+        {hasMore && !expanded && (
+          <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 flex items-center justify-center border-t border-gray-200 dark:border-gray-700 sm:px-6">
+            <button
+              onClick={handleExpand}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Loading...' : `Show All ${totalCount} Results`}
+            </button>
           </div>
         )}
         
         {prices.length === 0 && !loading && (
           <div className="text-center py-12">
             <p className="text-gray-500 dark:text-gray-400">No price data found matching the criteria</p>
+          </div>
+        )}
+        
+        {loading && (
+          <div className="text-center py-12">
+            <p className="text-gray-500 dark:text-gray-400">Loading data...</p>
           </div>
         )}
       </div>

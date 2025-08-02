@@ -236,12 +236,12 @@ export default function CheapestTLDTable() {
                 >
                   Registration Price {getSortIcon('price')}
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
+                {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Renewal Price
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">
                   Transfer Price
-                </th>
+                </th> */}
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
@@ -265,7 +265,7 @@ export default function CheapestTLDTable() {
                       ${price.registrationPrice}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  {/* <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 dark:text-white">
                       ${price.renewalPrice}
                     </div>
@@ -274,7 +274,7 @@ export default function CheapestTLDTable() {
                     <div className="text-sm text-gray-900 dark:text-white">
                       ${price.transferPrice}
                     </div>
-                  </td>
+                  </td> */}
                 </tr>
               ))}
             </tbody>

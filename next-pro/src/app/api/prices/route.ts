@@ -20,7 +20,7 @@ export async function GET(request: NextRequest) {
   const registrar = searchParams.get('registrar');
   const extension = searchParams.get('extension');
   const page = parseInt(searchParams.get('page') || '1');
-  const limit = Math.min(parseInt(searchParams.get('limit') || '20'), 20);
+  const limit = Math.max(parseInt(searchParams.get('limit') || '20'), 20);
   const sortBy = searchParams.get('sortBy') || 'registrar';
   const sortOrder = searchParams.get('sortOrder') || 'asc';
 
