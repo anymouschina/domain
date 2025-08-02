@@ -29,7 +29,7 @@ export async function GET(request: NextRequest) {
     if (extension) {
       const tldRecords = await prisma.tld.findMany({
         where: { 
-          name: extension.startsWith('.') ? extension : `.${extension}`
+          name: extension
         }
       });
       if (tldRecords.length > 0) {
