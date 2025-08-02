@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 interface PriceData {
   id: number;
@@ -41,14 +41,39 @@ export default function RealTimePriceTable() {
 
   const [extensions, setExtensions] = useState(['.net', '.org', '.info', '.co', '.io', '.xyz', '.com']);
 
+  // 防抖处理筛选条件变化
+  const [debouncedRegistrarFilter, setDebouncedRegistrarFilter] = useState(registrarFilter);
+  const [debouncedExtensionFilter, setDebouncedExtensionFilter] = useState(extensionFilter);
+
+  // 防抖注册商筛选
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedRegistrarFilter(registrarFilter);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [registrarFilter]);
+
+  // 防抖域名后缀筛选
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedExtensionFilter(extensionFilter);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [extensionFilter]);
+
+  // 当防抖后的筛选条件变化时重置到第一页
+  useEffect(() => {
+    setPage(1);
+  }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder]);
+
   // 实时加载数据
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        if (registrarFilter) params.append('registrar', registrarFilter);
-        if (extensionFilter) params.append('extension', extensionFilter);
+        if (debouncedRegistrarFilter) params.append('registrar', debouncedRegistrarFilter);
+        if (debouncedExtensionFilter) params.append('extension', debouncedExtensionFilter);
         params.append('sortBy', sortBy);
         params.append('sortOrder', sortOrder);
         params.append('page', page.toString());
@@ -75,7 +100,7 @@ export default function RealTimePriceTable() {
     };
 
     loadData();
-  }, [registrarFilter, extensionFilter, sortBy, sortOrder, page]);
+  }, [debouncedRegistrarFilter, debouncedExtensionFilter, sortBy, sortOrder, page]);
   useEffect(() => {
     const loadTlds = async () => {
       try {
