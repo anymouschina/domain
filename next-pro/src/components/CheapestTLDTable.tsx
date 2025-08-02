@@ -44,6 +44,7 @@ export default function CheapestTLDTable() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedTldNameFilter(tldNameFilter);
+      setPage(1); // 筛选条件变化时重置到第一页
     }, 300);
     return () => clearTimeout(timer);
   }, [tldNameFilter]);
@@ -278,8 +279,27 @@ export default function CheapestTLDTable() {
         </div>
         
         {/* 分页控件 */}
-        {pagination.totalPages > 1 && (
+        {(pagination.totalPages > 1 || pagination.totalCount > 0) && (
           <div className="bg-gray-50 dark:bg-gray-700 px-4 py-3 flex items-center justify-between border-t border-gray-200 dark:border-gray-700 sm:px-6">
+            {/* 移动端分页 */}
+            <div className="flex-1 flex justify-between sm:hidden">
+              <button
+                onClick={() => handlePageChange(pagination.page - 1)}
+                disabled={!pagination.hasPrev}
+                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                上一页
+              </button>
+              <button
+                onClick={() => handlePageChange(pagination.page + 1)}
+                disabled={!pagination.hasNext}
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                下一页
+              </button>
+            </div>
+            
+            {/* 桌面端分页 */}
             <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
               <div>
                 <p className="text-sm text-gray-700 dark:text-gray-300">

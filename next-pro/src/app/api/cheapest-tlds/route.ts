@@ -45,7 +45,6 @@ export async function GET(request: NextRequest) {
       ) p
       JOIN tld t ON p.tld_id = t.id
       ${countWhereClause}
-      GROUP BY tld_id
     `;
 
     const [cheapestPrices, countResult] = await Promise.all([
