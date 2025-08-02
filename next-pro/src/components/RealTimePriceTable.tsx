@@ -331,9 +331,9 @@ export default function RealTimePriceTable() {
                           }}
                         />
                       )} */}
-                      <div className="text-sm font-medium text-gray-900 dark:text-white">
+                      <a href={`https://${price.registrar}`} target='_blank' className="text-sm font-medium text-blue-900 dark:text-white">
                         {price.registrar}
-                      </div>
+                      </a>
                     </div>
                   </td>
                   {/* <td className="px-6 py-4 whitespace-nowrap">

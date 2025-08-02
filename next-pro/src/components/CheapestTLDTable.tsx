@@ -246,16 +246,19 @@ export default function CheapestTLDTable() {
             </thead>
             <tbody className="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
               {prices.map((price) => (
-                <tr key={`${price.tld}-${price.registrar}-${price.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                <tr  key={`${price.tld}-${price.registrar}-${price.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <a href={`/?extension=${price.tld}`}>
+                    <div className="text-sm font-medium text-blue-900 dark:text-white">
                       {price.tld}
                     </div>
+                    </a>
+                  
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900 dark:text-white">
+                    <a href={`https://${price.registrar}`} target='_blank' className="text-sm font-medium text-blue-900 dark:text-white">
                       {price.registrar}
-                    </div>
+                    </a>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900 dark:text-white font-medium text-green-600">
