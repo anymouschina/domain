@@ -39,7 +39,6 @@ export default function RealTimePriceTable() {
     hasPrev: false
   });
 
-  const popularRegistrars = ['GoDaddy', 'Namecheap', 'Cloudflare', 'Google Domains', 'Name.com'];
   const popularExtensions = ['.net', '.org', '.info', '.co', '.io', '.xyz', '.com'];
 
   // 实时加载数据
@@ -142,7 +141,6 @@ export default function RealTimePriceTable() {
                 onChange={(e) => setExtensionFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                <option value="">所有后缀</option>
                 {popularExtensions.map((ext) => (
                   <option key={ext} value={ext}>{ext}</option>
                 ))}
