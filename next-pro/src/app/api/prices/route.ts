@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface PriceRecord {
+  id: number;
+  registrar_name: string;
+  extension_name: string;
+  reg_price: number;
+  renew_price: number;
+  transfer_price: number;
+  created_at: Date;
+}
+
+interface CountResult {
+  total: number;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const registrar = searchParams.get('registrar');
@@ -69,7 +83,7 @@ export async function GET(request: NextRequest) {
       prisma.$queryRawUnsafe(countQuery)
     ]);
 
-    const formattedPrices = (prices as any[]).map(price => ({
+    const formattedPrices = (prices as PriceRecord[]).map(price => ({
       id: Number(price.id),
       registrar: price.registrar_name || 'Unknown',
       extension: price.extension_name || 'Unknown',
@@ -81,7 +95,7 @@ export async function GET(request: NextRequest) {
       createdAt: price.created_at
     }));
 
-    const totalCount = Number((countResult as any[])[0].total);
+    const totalCount = Number((countResult as CountResult[])[0].total);
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({

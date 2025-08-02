@@ -1,6 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+interface CheapestPriceRecord {
+  id: number;
+  registrar_name: string;
+  tld_name: string;
+  reg_price: number;
+  renew_price: number;
+  transfer_price: number;
+  created_at: Date;
+}
+
+interface CountResult {
+  total: number;
+}
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const page = parseInt(searchParams.get('page') || '1');
@@ -12,7 +26,7 @@ export async function GET(request: NextRequest) {
   try {
     const offset = (page - 1) * limit;
 
-    // 构建基础查询条件
+    // Build base query conditions
     let whereClause = 'WHERE p.rn = 1';
     let countWhereClause = '';
     
@@ -21,7 +35,7 @@ export async function GET(request: NextRequest) {
       countWhereClause = `WHERE t.name LIKE '%${tldName}%'`;
     }
 
-    // 使用窗口函数获取每个TLD的最便宜价格（按注册价格排序）
+    // Use window function to get the cheapest price for each TLD (sorted by registration price)
     const rawQuery = `
       SELECT p.*, r.name as registrar_name, t.name as tld_name
       FROM (
@@ -52,7 +66,7 @@ export async function GET(request: NextRequest) {
       prisma.$queryRawUnsafe(countQuery)
     ]);
 
-    const formattedPrices = (cheapestPrices as any[]).map(price => ({
+    const formattedPrices = (cheapestPrices as CheapestPriceRecord[]).map(price => ({
       id: Number(price.id),
       registrar: price.registrar_name || 'Unknown',
       tld: price.tld_name || 'Unknown',
@@ -63,7 +77,7 @@ export async function GET(request: NextRequest) {
       createdAt: price.created_at
     }));
 
-    const totalCount = Number((countResult as any[])[0].total);
+    const totalCount = Number((countResult as CountResult[])[0].total);
     const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({

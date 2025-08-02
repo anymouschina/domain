@@ -15,11 +15,10 @@ export async function GET(request: NextRequest) {
         take: 20
       });
 
-      // 处理BigInt序列化问题
+      // Handle BigInt serialization issue
       const formattedTLDs = latestTLDs.map(tld => ({
         id: Number(tld.id),
         name: tld.name,
-        description: tld.description,
         createdAt: tld.created_at,
         updatedAt: tld.updated_at
       }));
@@ -36,16 +35,6 @@ export async function GET(request: NextRequest) {
     const tld = await prisma.tld.findFirst({
       where: {
         name: name.startsWith('.') ? name : `.${name}`
-      },
-      include: {
-        prices: {
-          include: {
-            reg: true
-          },
-          orderBy: {
-            created_at: 'desc'
-          }
-        }
       }
     });
 
@@ -59,16 +48,35 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 处理BigInt序列化问题
+    // Get prices for this TLD
+    const prices = await prisma.price.findMany({
+      where: {
+        tld_id: Number(tld.id)
+      },
+      orderBy: {
+        created_at: 'desc'
+      }
+    });
+
+    // Get registrars for the prices
+    const registrarIds = [...new Set(prices.map(p => p.reg_id))];
+    const registrars = await prisma.reg.findMany({
+      where: {
+        id: { in: registrarIds.map(id => BigInt(id)) }
+      }
+    });
+
+    const registrarMap = new Map(registrars.map(r => [r.id, r.name]));
+
+    // Handle BigInt serialization issue
     const formattedTLD = {
       id: Number(tld.id),
       name: tld.name,
-      description: tld.description,
       createdAt: tld.created_at,
       updatedAt: tld.updated_at
     };
 
-    const formattedPrices = tld.prices.map(price => ({
+    const formattedPrices = prices.map(price => ({
       id: Number(price.id),
       regId: Number(price.reg_id),
       tldId: Number(price.tld_id),
@@ -76,7 +84,7 @@ export async function GET(request: NextRequest) {
       renewalPrice: Number(price.renew_price),
       transferPrice: Number(price.transfer_price),
       currency: 'USD',
-      registrar: price.reg.name,
+      registrar: registrarMap.get(BigInt(price.reg_id)) || 'Unknown',
       createdAt: price.created_at
     }));
 
