@@ -11,98 +11,78 @@ export async function GET(request: NextRequest) {
   const sortOrder = searchParams.get('sortOrder') || 'asc';
 
   try {
-    // 获取所有符合条件的最新价格记录
-    const whereConditions: any = {};
+    // 构建动态WHERE条件
+    const whereConditions: string[] = [];
     
     if (registrar) {
-      const regRecord = await prisma.reg.findFirst({
+      const regRecords = await prisma.reg.findMany({
         where: { name: { contains: registrar } }
       });
-      if (regRecord) {
-        whereConditions.reg_id = Number(regRecord.id);
+      if (regRecords.length > 0) {
+        whereConditions.push(`reg_id IN (${regRecords.map(r => r.id).join(',')})`);
+      } else {
+        // 如果没有匹配的注册商，添加一个不可能的条件
+        whereConditions.push('reg_id = 0');
       }
     }
     
     if (extension) {
-      const tldRecord = await prisma.tld.findFirst({
+      const tldRecords = await prisma.tld.findMany({
         where: { 
           name: extension.startsWith('.') ? extension : `.${extension}`
         }
       });
-      if (tldRecord) {
-        whereConditions.tld_id = Number(tldRecord.id);
+      if (tldRecords.length > 0) {
+        whereConditions.push(`tld_id IN (${tldRecords.map(t => t.id).join(',')})`);
+      } else {
+        // 如果没有匹配的域名后缀，添加一个不可能的条件
+        whereConditions.push('tld_id = 0');
       }
     }
 
-    // 获取所有符合条件的记录，按reg_id分组获取最新的一条
-    const allPrices = await prisma.price.findMany({
-      where: Object.keys(whereConditions).length > 0 ? whereConditions : undefined,
-      include: {
-        reg: true,
-        tld: true
-      },
-      orderBy: {
-        created_at: 'desc'
-      }
-    });
-
-    // 按reg_id去重，保留最新的记录
-    const uniquePrices = allPrices.reduce((acc, price) => {
-      const key = price.reg_id;
-      if (!acc[key] || acc[key].created_at < price.created_at) {
-        acc[key] = price;
-      }
-      return acc;
-    }, {} as Record<string, any>);
-
-    const deduplicatedPrices = Object.values(uniquePrices);
-
-    // 排序
-    const sortedPrices = deduplicatedPrices.sort((a, b) => {
-      let aValue, bValue;
-      
-      switch (sortBy) {
-        case 'registrar':
-          aValue = a.reg.name.toLowerCase();
-          bValue = b.reg.name.toLowerCase();
-          break;
-        case 'extension':
-          aValue = a.tld.name.toLowerCase();
-          bValue = b.tld.name.toLowerCase();
-          break;
-        case 'price':
-          aValue = Number(a.reg_price);
-          bValue = Number(b.reg_price);
-          break;
-        default:
-          aValue = a.reg.name.toLowerCase();
-          bValue = b.reg.name.toLowerCase();
-      }
-
-      if (sortOrder === 'desc') {
-        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
-      } else {
-        return aValue > bValue ? 1 : aValue < bValue ? -1 : 0;
-      }
-    });
-
-    // 分页
-    const totalCount = sortedPrices.length;
-    const totalPages = Math.ceil(totalCount / limit);
+    // 使用窗口函数获取每个reg_id的最新记录（性能优化版本）
     const offset = (page - 1) * limit;
-    const paginatedPrices = sortedPrices.slice(offset, offset + limit);
+    
+    const rawQuery = `
+      SELECT p.*, r.name as registrar_name, t.name as extension_name
+      FROM (
+        SELECT *, 
+               ROW_NUMBER() OVER (PARTITION BY reg_id ORDER BY created_at DESC) as rn
+        FROM price
+        ${whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''}
+      ) p
+      JOIN reg r ON p.reg_id = r.id
+      JOIN tld t ON p.tld_id = t.id
+      WHERE p.rn = 1
+      ORDER BY ${sortBy === 'registrar' ? 'r.name' : sortBy === 'extension' ? 't.name' : 'p.reg_price'} ${sortOrder === 'asc' ? 'ASC' : 'DESC'}
+      LIMIT ${limit} OFFSET ${offset}
+    `;
 
-    const formattedPrices = paginatedPrices.map(price => ({
+    const countQuery = `
+      SELECT COUNT(DISTINCT reg_id) as total
+      FROM price
+      ${whereConditions.length > 0 ? `WHERE ${whereConditions.join(' AND ')}` : ''}
+    `;
+
+    const [prices, countResult] = await Promise.all([
+      prisma.$queryRawUnsafe(rawQuery),
+      prisma.$queryRawUnsafe(countQuery)
+    ]);
+
+    const formattedPrices = (prices as any[]).map(price => ({
       id: Number(price.id),
-      registrar: price.reg.name || 'Unknown',
-      extension: price.tld.name || 'Unknown',
+      registrar: price.registrar_name || 'Unknown',
+      extension: price.extension_name || 'Unknown',
       registrationPrice: Number(price.reg_price),
       renewalPrice: Number(price.renew_price),
       transferPrice: Number(price.transfer_price),
       currency: 'USD',
-      logo: `https://logo.clearbit.com/${price.reg.name?.toLowerCase().replace(' ', '') || 'unknown'}.com`,
+      logo: `https://logo.clearbit.com/${price.registrar_name?.toLowerCase().replace(' ', '') || 'unknown'}.com`,
       createdAt: price.created_at
     }));
+
+    const totalCount = Number((countResult as any[])[0].total);
+    const totalPages = Math.ceil(totalCount / limit);
 
     return NextResponse.json({
       prices: formattedPrices,
