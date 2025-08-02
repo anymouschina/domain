@@ -2,6 +2,18 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+// 定义促销信息的数据结构
+interface PromoData {
+  id: number;
+  code: string;
+  price: number;
+  type: number;
+  isLimited: boolean;
+  isOnlyForNewUser: boolean;
+  createdAt: Date | null;
+}
+
+// 更新价格数据接口，添加促销字段
 interface PriceData {
   id: number;
   registrar: string;
@@ -11,6 +23,7 @@ interface PriceData {
   transferPrice: number;
   currency: string;
   logo?: string;
+  promos?: PromoData[]; // 新增促销信息字段
 }
 
 interface TldData {
@@ -22,12 +35,15 @@ export default function RealTimePriceTable() {
   const [loading, setLoading] = useState(false);
   const [registrarFilter, setRegistrarFilter] = useState('');
   const [extensionFilter, setExtensionFilter] = useState('com');
-  const [sortBy, setSortBy] = useState<'registrar' | 'extension' | 'price'>('registrar');
+  // 增加按促销价格排序的选项
+  const [sortBy, setSortBy] = useState<'registrar' | 'extension' | 'price' | 'promo'>('registrar');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [currentExtension, setCurrentExtension] = useState('com');
   const [expanded, setExpanded] = useState(false);
   const [totalCount, setTotalCount] = useState(0);
   const [hasMore, setHasMore] = useState(false);
+  // 用于控制哪个促销提示被点击显示
+  const [activePromoId, setActivePromoId] = useState<number | null>(null);
 
   // 每次加载的数量
   const PAGE_SIZE = 20;
@@ -79,8 +95,9 @@ export default function RealTimePriceTable() {
     }
 
     if (urlSortBy) {
-      if (urlSortBy === 'registrar' || urlSortBy === 'extension' || urlSortBy === 'price') {
-        setSortBy(urlSortBy as 'registrar' | 'extension' | 'price');
+      // 支持按促销价格排序
+      if (['registrar', 'extension', 'price', 'promo'].includes(urlSortBy)) {
+        setSortBy(urlSortBy as 'registrar' | 'extension' | 'price' | 'promo');
       }
     }
 
@@ -165,7 +182,7 @@ export default function RealTimePriceTable() {
     loadData();
   }, [loadData]);
   
-  const handleSort = (newSortBy: 'registrar' | 'extension' | 'price') => {
+  const handleSort = (newSortBy: 'registrar' | 'extension' | 'price' | 'promo') => {
     if (sortBy === newSortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
     } else {
@@ -183,9 +200,14 @@ export default function RealTimePriceTable() {
     setExtensionFilter('');
   };
 
-  const getSortIcon = (column: 'registrar' | 'extension' | 'price') => {
+  const getSortIcon = (column: 'registrar' | 'extension' | 'price' | 'promo') => {
     if (sortBy !== column) return '⇅';
     return sortOrder === 'asc' ? '↑' : '↓';
+  };
+
+  // 处理促销提示的点击事件
+  const togglePromoDetails = (promoId: number) => {
+    setActivePromoId(activePromoId === promoId ? null : promoId);
   };
 
 
@@ -263,24 +285,129 @@ export default function RealTimePriceTable() {
                 <tr key={`${price.registrar}-${price.extension}-${price.id}`} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
-                      <a href={`https://${price.registrar}`} target='_blank' className="text-sm font-medium text-blue-900 dark:text-white">
+                      <a href={`https://${price.registrar}`} target='_blank' rel="noopener noreferrer" className="text-sm font-medium text-blue-900 dark:text-white">
                         {price.registrar}
                       </a>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white font-medium text-green-600">
-                      ${price.registrationPrice}
+                    <div className="text-sm text-gray-900 dark:text-white flex ">
+                      ${price.registrationPrice.toFixed(2)}
+                      {price.promos && price.promos.length > 0 ? price.promos.filter(promo => promo.type === 0).map((promo,index) => {
+                        return (
+                          <div key={index}>
+                      <div className="relative group">
+                              <button 
+                                onClick={() => togglePromoDetails(promo.id)}
+                                className="text-sm font-medium text-green-600 flex items-center focus:outline-none"
+                              >
+                                <span className="ml-1 bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">
+                                  Promo
+                                </span>
+                              </button>
+                              
+                            </div>
+                          {
+                            activePromoId === promo.id ? (
+                              <div className="absolute z-10 bg-gray-900 text-white text-xs rounded p-2 mt-1 w-64 shadow-lg">
+                              <p className="mb-1">${promo.price.toFixed(2)} applies in cart</p>
+                              <p className="mb-1">${price.registrationPrice.toFixed(2)} usual price</p>
+                              {promo.isLimited && (
+                                <p className="text-red-300 text-xs">Limited time offer</p>
+                              )}
+                              {promo.isOnlyForNewUser && (
+                                <p className="text-yellow-300 text-xs">New users only</p>
+                              )}
+                              {promo.code && (
+                                <p className="text-blue-300 text-xs mt-1">Promo code: {promo.code}</p>
+                              )}
+                            </div>
+                            ):''
+                          }
+                            
+                          </div>
+                        )
+                      }):''}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
-                      ${price.renewalPrice}
+                    <div className="text-sm text-gray-900 dark:text-white flex">
+                      ${price.renewalPrice.toFixed(2)}
+                      {price.promos && price.promos.length > 0 ? price.promos.filter(promo => promo.type === 1).map((promo,index) => {
+                        return (
+                          <div key={index}>
+                      <div className="relative group">
+                              <button 
+                                onClick={() => togglePromoDetails(promo.id)}
+                                className="text-sm font-medium text-green-600 flex items-center focus:outline-none"
+                              >
+                                <span className="ml-1 bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">
+                                  Promo
+                                </span>
+                              </button>
+                              
+                            </div>
+                          {
+                            activePromoId === promo.id ? (
+                              <div className="absolute z-10 bg-gray-900 text-white text-xs rounded p-2 mt-1 w-64 shadow-lg">
+                              <p className="mb-1">${promo.price.toFixed(2)} applies in cart</p>
+                              <p className="mb-1">${price.renewalPrice.toFixed(2)} usual price</p>
+                              {promo.isLimited && (
+                                <p className="text-red-300 text-xs">Limited time offer</p>
+                              )}
+                              {promo.isOnlyForNewUser && (
+                                <p className="text-yellow-300 text-xs">New users only</p>
+                              )}
+                              {promo.code && (
+                                <p className="text-blue-300 text-xs mt-1">Promo code: {promo.code}</p>
+                              )}
+                            </div>
+                            ):''
+                          }
+                            
+                          </div>
+                        )
+                      }):''}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900 dark:text-white">
-                      ${price.transferPrice}
+                    <div className="text-sm text-gray-900 dark:text-white flex">
+                      ${price.transferPrice.toFixed(2)}
+                      {price.promos && price.promos.length > 0 ? price.promos.filter(promo => promo.type === 2).map((promo,index) => {
+                        return (
+                          <div key={index}>
+                      <div className="relative group">
+                              <button 
+                                onClick={() => togglePromoDetails(promo.id)}
+                                className="text-sm font-medium text-green-600 flex items-center focus:outline-none"
+                              >
+                                <span className="ml-1 bg-red-100 text-red-800 text-xs px-1.5 py-0.5 rounded dark:bg-red-900 dark:text-red-300">
+                                  Promo
+                                </span>
+                              </button>
+                              
+                            </div>
+                          {
+                            activePromoId === promo.id ? (
+                              <div className="absolute z-10 bg-gray-900 text-white text-xs rounded p-2 mt-1 w-64 shadow-lg">
+                              <p className="mb-1">${promo.price.toFixed(2)} applies in cart</p>
+                              <p className="mb-1">${price.transferPrice.toFixed(2)} usual price</p>
+                              {promo.isLimited && (
+                                <p className="text-red-300 text-xs">Limited time offer</p>
+                              )}
+                              {promo.isOnlyForNewUser && (
+                                <p className="text-yellow-300 text-xs">New users only</p>
+                              )}
+                              {promo.code && (
+                                <p className="text-blue-300 text-xs mt-1">Promo code: {promo.code}</p>
+                              )}
+                            </div>
+                            ):''
+                          }
+                            
+                          </div>
+                        )
+                      }):''}
                     </div>
                   </td>
                 </tr>
