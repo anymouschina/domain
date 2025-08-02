@@ -15,10 +15,19 @@ export async function GET(request: NextRequest) {
         take: 20
       });
 
+      // 处理BigInt序列化问题
+      const formattedTLDs = latestTLDs.map(tld => ({
+        id: Number(tld.id),
+        name: tld.name,
+        description: tld.description,
+        createdAt: tld.created_at,
+        updatedAt: tld.updated_at
+      }));
+
       return NextResponse.json({
         type: 'tlds',
-        tlds: latestTLDs,
-        totalResults: latestTLDs.length,
+        tlds: formattedTLDs,
+        totalResults: formattedTLDs.length,
         message: 'Latest TLDs'
       });
     }
@@ -32,6 +41,9 @@ export async function GET(request: NextRequest) {
         prices: {
           include: {
             reg: true
+          },
+          orderBy: {
+            created_at: 'desc'
           }
         }
       }
@@ -47,11 +59,32 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // 处理BigInt序列化问题
+    const formattedTLD = {
+      id: Number(tld.id),
+      name: tld.name,
+      description: tld.description,
+      createdAt: tld.created_at,
+      updatedAt: tld.updated_at
+    };
+
+    const formattedPrices = tld.prices.map(price => ({
+      id: Number(price.id),
+      regId: Number(price.reg_id),
+      tldId: Number(price.tld_id),
+      registrationPrice: Number(price.reg_price),
+      renewalPrice: Number(price.renew_price),
+      transferPrice: Number(price.transfer_price),
+      currency: 'USD',
+      registrar: price.reg.name,
+      createdAt: price.created_at
+    }));
+
     return NextResponse.json({
       type: 'tld',
-      tld: tld,
-      prices: tld.prices,
-      totalResults: tld.prices.length,
+      tld: formattedTLD,
+      prices: formattedPrices,
+      totalResults: formattedPrices.length,
       message: 'TLD found'
     });
 

@@ -39,7 +39,7 @@ export default function RealTimePriceTable() {
     hasPrev: false
   });
 
-  const popularExtensions = ['.net', '.org', '.info', '.co', '.io', '.xyz', '.com'];
+  const [extensions, setExtensions] = useState(['.net', '.org', '.info', '.co', '.io', '.xyz', '.com']);
 
   // 实时加载数据
   useEffect(() => {
@@ -55,6 +55,7 @@ export default function RealTimePriceTable() {
         params.append('limit', '20');
         
         const response = await fetch(`/api/prices?${params.toString()}`);
+    
         const data = await response.json();
         setPrices(data.prices || []);
         setPagination(data.pagination || {
@@ -75,7 +76,20 @@ export default function RealTimePriceTable() {
 
     loadData();
   }, [registrarFilter, extensionFilter, sortBy, sortOrder, page]);
-
+  useEffect(() => {
+    const loadTlds = async () => {
+      try {
+        const response = await fetch(`/api/tlds`);
+        const data = await response.json();
+        if (data.tlds && Array.isArray(data.tlds)) {
+          setExtensions(data.tlds.map((tld: any) => tld.name));
+        }
+      } catch (error) {
+        console.error('Error loading TLDs:', error);
+      }
+    }
+    loadTlds();
+  }, []);
   const handleSort = (newSortBy: 'registrar' | 'extension' | 'price') => {
     if (sortBy === newSortBy) {
       setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
@@ -141,7 +155,8 @@ export default function RealTimePriceTable() {
                 onChange={(e) => setExtensionFilter(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
-                {popularExtensions.map((ext) => (
+                <option value="">所有后缀</option>
+                {extensions.map((ext) => (
                   <option key={ext} value={ext}>{ext}</option>
                 ))}
               </select>
