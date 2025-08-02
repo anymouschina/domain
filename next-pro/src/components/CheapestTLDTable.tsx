@@ -24,6 +24,7 @@ interface Pagination {
 export default function CheapestTLDTable() {
   const [prices, setPrices] = useState<CheapestTLDData[]>([]);
   const [loading, setLoading] = useState(false);
+  const [tldNameFilter, setTldNameFilter] = useState('');
   const [sortBy, setSortBy] = useState<'tld' | 'registrar' | 'price'>('tld');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
@@ -36,12 +37,24 @@ export default function CheapestTLDTable() {
     hasPrev: false
   });
 
+  // 防抖处理筛选条件变化
+  const [debouncedTldNameFilter, setDebouncedTldNameFilter] = useState(tldNameFilter);
+
+  // 防抖TLD名称筛选
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedTldNameFilter(tldNameFilter);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [tldNameFilter]);
+
   // 从URL读取参数
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
     const urlPage = urlParams.get('page');
     const urlSortBy = urlParams.get('sortBy');
     const urlSortOrder = urlParams.get('sortOrder');
+    const urlTldName = urlParams.get('tldName');
 
     if (urlPage) {
       const pageNum = parseInt(urlPage);
@@ -60,6 +73,10 @@ export default function CheapestTLDTable() {
       if (urlSortOrder === 'asc' || urlSortOrder === 'desc') {
         setSortOrder(urlSortOrder);
       }
+    }
+
+    if (urlTldName) {
+      setTldNameFilter(urlTldName);
     }
   }, []);
 
@@ -85,9 +102,15 @@ export default function CheapestTLDTable() {
       urlParams.delete('sortOrder');
     }
 
+    if (debouncedTldNameFilter) {
+      urlParams.set('tldName', debouncedTldNameFilter);
+    } else {
+      urlParams.delete('tldName');
+    }
+
     const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
     window.history.replaceState(null, '', newUrl);
-  }, [page, sortBy, sortOrder]);
+  }, [page, sortBy, sortOrder, debouncedTldNameFilter]);
 
   // 实时加载数据
   useEffect(() => {
@@ -99,6 +122,10 @@ export default function CheapestTLDTable() {
         params.append('sortOrder', sortOrder);
         params.append('page', page.toString());
         params.append('limit', '20');
+        
+        if (debouncedTldNameFilter) {
+          params.append('tldName', debouncedTldNameFilter);
+        }
         
         const response = await fetch(`/api/cheapest-tlds?${params.toString()}`);
     
@@ -121,7 +148,7 @@ export default function CheapestTLDTable() {
     };
 
     loadData();
-  }, [sortBy, sortOrder, page]);
+  }, [sortBy, sortOrder, page, debouncedTldNameFilter]);
 
   const handleSort = (newSortBy: 'tld' | 'registrar' | 'price') => {
     if (sortBy === newSortBy) {
@@ -143,8 +170,47 @@ export default function CheapestTLDTable() {
     return sortOrder === 'asc' ? '↑' : '↓';
   };
 
+  const handleClear = () => {
+    setTldNameFilter('');
+    setPage(1);
+  };
+
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 筛选器 */}
+      <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+        <div className="p-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                域名后缀筛选
+              </label>
+              <input
+                type="text"
+                placeholder="输入域名后缀，如.com、.net等"
+                value={tldNameFilter}
+                onChange={(e) => setTldNameFilter(e.target.value)}
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                分页: {pagination.totalCount} 条记录
+              </label>
+              <div className="flex gap-2">
+                <button
+                  onClick={handleClear}
+                  className="px-3 py-1 text-sm bg-gray-500 text-white rounded hover:bg-gray-600 transition-colors"
+                >
+                  清空
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 价格表格 */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700">
         <div className="overflow-x-auto">
