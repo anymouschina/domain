@@ -11,7 +11,7 @@ export default function Home() {
             域名注册价格对比
           </h1>
           <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-            实时比较各大注册商提供的 .net、.org、.info、.co、.io、.xyz 等域名后缀价格，找到最便宜的注册商
+            实时比较各大注册商提供的域名后缀价格，找到最便宜的注册商
           </p>
         </div>
 

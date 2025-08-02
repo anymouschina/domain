@@ -30,6 +30,7 @@ export default function RealTimePriceTable() {
   const [sortBy, setSortBy] = useState<'registrar' | 'extension' | 'price'>('registrar');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [page, setPage] = useState(1);
+  const [currentExtension, setCurrentExtension] = useState('.com');
   const [pagination, setPagination] = useState<Pagination>({
     page: 1,
     limit: 20,
@@ -60,6 +61,85 @@ export default function RealTimePriceTable() {
     }, 300);
     return () => clearTimeout(timer);
   }, [extensionFilter]);
+
+  // 从URL读取参数并设置筛选条件
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlExtension = urlParams.get('extension');
+    const urlRegistrar = urlParams.get('registrar');
+    const urlPage = urlParams.get('page');
+    const urlSortBy = urlParams.get('sortBy');
+    const urlSortOrder = urlParams.get('sortOrder');
+
+    if (urlExtension) {
+      setExtensionFilter(urlExtension);
+      setCurrentExtension(urlExtension);
+    } else {
+      setExtensionFilter('.com');
+      setCurrentExtension('.com');
+    }
+
+    if (urlRegistrar) {
+      setRegistrarFilter(urlRegistrar);
+    }
+
+    if (urlPage) {
+      const pageNum = parseInt(urlPage);
+      if (!isNaN(pageNum) && pageNum > 0) {
+        setPage(pageNum);
+      }
+    }
+
+    if (urlSortBy) {
+      if (urlSortBy === 'registrar' || urlSortBy === 'extension' || urlSortBy === 'price') {
+        setSortBy(urlSortBy);
+      }
+    }
+
+    if (urlSortOrder) {
+      if (urlSortOrder === 'asc' || urlSortOrder === 'desc') {
+        setSortOrder(urlSortOrder);
+      }
+    }
+  }, []);
+
+  // 当筛选条件变化时更新URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    
+    if (extensionFilter && extensionFilter !== '.com') {
+      urlParams.set('extension', extensionFilter);
+    } else {
+      urlParams.delete('extension');
+    }
+
+    if (registrarFilter) {
+      urlParams.set('registrar', registrarFilter);
+    } else {
+      urlParams.delete('registrar');
+    }
+
+    if (page > 1) {
+      urlParams.set('page', page.toString());
+    } else {
+      urlParams.delete('page');
+    }
+
+    if (sortBy !== 'registrar') {
+      urlParams.set('sortBy', sortBy);
+    } else {
+      urlParams.delete('sortBy');
+    }
+
+    if (sortOrder !== 'asc') {
+      urlParams.set('sortOrder', sortOrder);
+    } else {
+      urlParams.delete('sortOrder');
+    }
+
+    const newUrl = `${window.location.pathname}${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
+    window.history.replaceState(null, '', newUrl);
+  }, [extensionFilter, registrarFilter, page, sortBy, sortOrder]);
 
   // 当防抖后的筛选条件变化时重置到第一页
   useEffect(() => {
@@ -141,19 +221,16 @@ export default function RealTimePriceTable() {
     return sortOrder === 'asc' ? '↑' : '↓';
   };
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <p className="mt-2 text-gray-600">正在加载价格数据...</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      {/* 当前查询后缀显示 */}
+      <div className="mb-4 text-center">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+          当前查询后缀：<span className="text-blue-600">{currentExtension === '' ? '所有后缀' : currentExtension}</span>
+        </h2>
+      </div>
+
       {/* 筛选器 */}
       <div className="bg-white dark:bg-gray-800 shadow-sm rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
         <div className="p-6">
@@ -171,13 +248,16 @@ export default function RealTimePriceTable() {
               />
             </div>
             
-            <div>
+            {/* <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                 域名后缀
               </label>
               <select
                 value={extensionFilter}
-                onChange={(e) => setExtensionFilter(e.target.value)}
+                onChange={(e) => {
+                  setExtensionFilter(e.target.value);
+                  setCurrentExtension(e.target.value || '.com');
+                }}
                 className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
               >
                 <option value="">所有后缀</option>
@@ -185,7 +265,7 @@ export default function RealTimePriceTable() {
                   <option key={ext} value={ext}>{ext}</option>
                 ))}
               </select>
-            </div>
+            </div> */}
 
             <div>
               <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
